@@ -24,6 +24,21 @@ Download everything NIDE supports, sequentially::
 
 Data lands in ``backend/data/<library-id>/`` and is git-ignored. Expect
 roughly 2 GB compressed / 5-10 GB extracted per library.
+
+Besides the neutron transport libraries, two small ENDF-6 sublibraries of
+ENDF/B-VIII.0 are fetched from NNDC (Brookhaven) as raw ENDF-6 text — they
+are not part of the OpenMC HDF5 distribution:
+
+* ``decay`` — radioactive decay data (half-lives, modes, branching ratios,
+  emission spectra), parsed at runtime by ``openmc.data.Decay``.
+* ``nfy`` — neutron-induced fission product yields, parsed by
+  ``openmc.data.FissionProductYields``.
+
+URLs verified against https://www.nndc.bnl.gov/endf-b8.0/ on 2026-07-04.
+
+Nuclide ground-state properties (masses, half-lives, abundances) for the
+chart of nuclides come from NUBASE2020, distributed as a fixed-width text
+file by the IAEA Atomic Mass Data Center (AMDC).
 """
 
 from __future__ import annotations
@@ -32,6 +47,7 @@ import argparse
 import subprocess
 import sys
 import tarfile
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -54,8 +70,8 @@ LIBRARIES: dict[str, LibrarySource] = {
         name="ENDF/B-VIII.0",
         url="https://anl.box.com/shared/static/uhbxlrx7hvxqw27psymfbhi7bx7s6u6a.xz",
         citation=(
-            "D.A. Brown et al., \"ENDF/B-VIII.0: The 8th Major Release of the "
-            "Nuclear Reaction Data Library\", Nucl. Data Sheets 148 (2018) 1-142. "
+            'D.A. Brown et al., "ENDF/B-VIII.0: The 8th Major Release of the '
+            'Nuclear Reaction Data Library", Nucl. Data Sheets 148 (2018) 1-142. '
             "doi:10.1016/j.nds.2018.02.001"
         ),
     ),
@@ -64,8 +80,8 @@ LIBRARIES: dict[str, LibrarySource] = {
         name="JEFF-3.3",
         url="https://anl.box.com/shared/static/4jwkvrr9pxlruuihcrgti75zde6g7bum.xz",
         citation=(
-            "A.J.M. Plompen et al., \"The joint evaluated fission and fusion "
-            "nuclear data library, JEFF-3.3\", Eur. Phys. J. A 56 (2020) 181. "
+            'A.J.M. Plompen et al., "The joint evaluated fission and fusion '
+            'nuclear data library, JEFF-3.3", Eur. Phys. J. A 56 (2020) 181. '
             "doi:10.1140/epja/s10050-020-00141-9"
         ),
     ),
@@ -74,12 +90,63 @@ LIBRARIES: dict[str, LibrarySource] = {
         name="JENDL-5",
         url="https://anl.box.com/shared/static/bitsmk1bjkjfj01h4lh29mmlqs1v30bn.xz",
         citation=(
-            "O. Iwamoto et al., \"Japanese evaluated nuclear data library "
-            "version 5: JENDL-5\", J. Nucl. Sci. Technol. 60 (2023) 1-60. "
+            'O. Iwamoto et al., "Japanese evaluated nuclear data library '
+            'version 5: JENDL-5", J. Nucl. Sci. Technol. 60 (2023) 1-60. '
             "doi:10.1080/00223131.2022.2141903"
         ),
     ),
 }
+
+
+# ENDF-6 sublibraries (decay, fission yields) and NUBASE2020, all small
+# (<100 MB total). Keys are the on-disk directory names under DATA_DIR.
+AUX_SOURCES: dict[str, tuple[str, str]] = {
+    "decay": (
+        "https://www.nndc.bnl.gov/endf-b8.0/zips/ENDF-B-VIII.0_decay.zip",
+        "ENDF/B-VIII.0 decay sublibrary (NNDC)",
+    ),
+    "nfy": (
+        "https://www.nndc.bnl.gov/endf-b8.0/zips/ENDF-B-VIII.0_nfy.zip",
+        "ENDF/B-VIII.0 neutron fission yields sublibrary (NNDC)",
+    ),
+    "nubase": (
+        "https://www-nds.iaea.org/amdc/ame2020/nubase_4.mas20.txt",
+        "NUBASE2020 nuclear properties table (IAEA AMDC)",
+    ),
+}
+
+
+def download_aux(key: str) -> None:
+    """Fetch one auxiliary dataset (decay / nfy / nubase) if missing."""
+    url, label = AUX_SOURCES[key]
+    dest_dir = DATA_DIR / key
+    if dest_dir.exists() and any(dest_dir.iterdir()):
+        print(f"[{key}] already present, skipping")
+        return
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    filename = url.rsplit("/", 1)[-1]
+    target = dest_dir / filename
+    print(f"[{key}] downloading {label}")
+    subprocess.run(
+        [
+            "curl",
+            "-L",
+            "--fail",
+            "--retry",
+            "5",
+            "--retry-delay",
+            "10",
+            "-o",
+            str(target),
+            url,
+        ],
+        check=True,
+    )
+    if target.suffix == ".zip":
+        with zipfile.ZipFile(target) as zf:
+            zf.extractall(dest_dir)
+        target.unlink()
+    print(f"[{key}] ready under {dest_dir}")
 
 
 def download(source: LibrarySource, dest_dir: Path) -> Path:
@@ -97,8 +164,20 @@ def download(source: LibrarySource, dest_dir: Path) -> Path:
         return archive
     print(f"[{source.library_id}] downloading {source.url}")
     subprocess.run(
-        ["curl", "-L", "-C", "-", "--fail", "--retry", "5", "--retry-delay", "10",
-         "-o", str(archive), source.url],
+        [
+            "curl",
+            "-L",
+            "-C",
+            "-",
+            "--fail",
+            "--retry",
+            "5",
+            "--retry-delay",
+            "10",
+            "-o",
+            str(archive),
+            source.url,
+        ],
         check=True,
     )
     marker.touch()
@@ -137,12 +216,26 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument(
         "library",
-        choices=[*LIBRARIES.keys(), "all"],
-        help="library to download, or 'all' for every supported library",
+        choices=[*LIBRARIES.keys(), *AUX_SOURCES.keys(), "aux", "all"],
+        help=(
+            "library or auxiliary dataset to download; 'aux' fetches "
+            "decay+nfy+nubase, 'all' fetches everything"
+        ),
     )
     args = parser.parse_args()
 
-    targets = list(LIBRARIES.values()) if args.library == "all" else [LIBRARIES[args.library]]
+    if args.library in AUX_SOURCES:
+        download_aux(args.library)
+        return 0
+    if args.library in ("aux", "all"):
+        for key in AUX_SOURCES:
+            download_aux(key)
+        if args.library == "aux":
+            return 0
+
+    targets = (
+        list(LIBRARIES.values()) if args.library == "all" else [LIBRARIES[args.library]]
+    )
     for source in targets:
         archive = download(source, DATA_DIR / source.library_id)
         extract(source, archive)

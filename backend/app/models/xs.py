@@ -11,7 +11,9 @@ from pydantic import BaseModel, Field
 
 
 class LibraryInfo(BaseModel):
-    library_id: str = Field(description="NIDE identifier used in API calls, e.g. 'endfb80'")
+    library_id: str = Field(
+        description="NIDE identifier used in API calls, e.g. 'endfb80'"
+    )
     name: str = Field(description="Evaluation name, e.g. 'ENDF/B-VIII.0'")
     version: str
     citation: str = Field(description="Official citation of the evaluation")
@@ -30,7 +32,9 @@ class ReactionEntry(BaseModel):
 class NuclideReactions(BaseModel):
     library_id: str
     nuclide: str
-    temperatures: list[str] = Field(description="Available temperatures, e.g. ['250K', '294K']")
+    temperatures: list[str] = Field(
+        description="Available temperatures, e.g. ['250K', '294K']"
+    )
     reactions: list[ReactionEntry]
 
 
@@ -40,9 +44,13 @@ class XSCurveResponse(BaseModel):
     nuclide: str
     mt: int
     reaction_name: str
-    temperature: str = Field(description="Temperature actually served (nearest available)")
+    temperature: str = Field(
+        description="Temperature actually served (nearest available)"
+    )
     energy_ev: list[float]
     xs_barns: list[float]
-    n_points_full: int = Field(description="Size of the full evaluation grid before decimation")
+    n_points_full: int = Field(
+        description="Size of the full evaluation grid before decimation"
+    )
     downsampled: bool
     citation: str

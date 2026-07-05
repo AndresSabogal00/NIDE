@@ -56,20 +56,25 @@ class ReactionInfo:
 
 
 def lttb_downsample(x: np.ndarray, y: np.ndarray, n_out: int) -> np.ndarray:
-    """Select indices with Largest-Triangle-Three-Buckets in log-log space.
+    """Select ~``n_out`` indices with extrema-augmented LTTB in log-log space.
 
-    LTTB [1]_ partitions the series into ``n_out - 2`` buckets and keeps, per
-    bucket, the point forming the largest triangle with the previously kept
-    point and the next bucket's centroid — the standard choice for preserving
-    visual extrema (here: resonance peaks and interference dips) when
-    decimating for display.
+    Largest-Triangle-Three-Buckets [1]_ partitions the series into buckets
+    and keeps, per bucket, the point forming the largest triangle with the
+    previously kept point and the next bucket's centroid. Plain LTTB can
+    still land on the shoulder of a very sharp peak rather than its apex, so
+    each bucket additionally contributes its running maximum and minimum
+    (M4-style aggregation [2]_): resonance peak amplitudes and interference
+    dips are then preserved *exactly* at the grid level, which matters for a
+    scientific viewer where users read peak values off the hover cursor.
+    The bucket count is ``n_out // 3`` so the output stays within the
+    requested budget (three selections per bucket, deduplicated).
 
-    The triangle areas are computed on ``(log10 x, log10 y)`` because the
-    frontend draws log-log axes: a resonance spanning two decades of sigma
-    within a few eV is visually huge but has negligible *linear* area. Points
-    with ``y <= 0`` (below reaction threshold) carry no information on a log
-    plot and are excluded from selection, except that the last zero before
-    the threshold rise is kept so the onset is drawn at the right energy.
+    All geometry is computed on ``(log10 x, log10 y)`` because the frontend
+    draws log-log axes: a resonance spanning two decades of sigma within a
+    few eV is visually huge but has negligible *linear* area. Points with
+    ``y <= 0`` (below reaction threshold) carry no information on a log plot
+    and are excluded from selection, except that the last zero before the
+    threshold rise is kept so the onset is drawn at the right energy.
 
     Parameters
     ----------
@@ -87,6 +92,8 @@ def lttb_downsample(x: np.ndarray, y: np.ndarray, n_out: int) -> np.ndarray:
     ----------
     .. [1] S. Steinarsson, "Downsampling Time Series for Visual
        Representation", M.Sc. thesis, University of Iceland (2013).
+    .. [2] U. Jugel et al., "M4: A Visualization-Oriented Time Series Data
+       Aggregation", Proc. VLDB Endow. 7 (2014) 797-808.
     """
     n = len(x)
     if n <= n_out:
@@ -104,27 +111,34 @@ def lttb_downsample(x: np.ndarray, y: np.ndarray, n_out: int) -> np.ndarray:
 
     lx = np.log10(x[candidate])
     # Zeros kept as onset anchors get a floor value for area computation only.
-    ly = np.log10(np.maximum(y[candidate], np.min(y[candidate][y[candidate] > 0]) * 1e-3))
+    ly = np.log10(
+        np.maximum(y[candidate], np.min(y[candidate][y[candidate] > 0]) * 1e-3)
+    )
 
     m = len(candidate)
-    selected = np.empty(n_out, dtype=np.int64)
-    selected[0] = 0
-    selected[-1] = m - 1
+    n_buckets = max(n_out // 3, 2)
+    selected: list[int] = [0, m - 1]
     # Bucket boundaries over the interior points.
-    bounds = np.linspace(1, m - 1, n_out - 1).astype(np.int64)
+    bounds = np.linspace(1, m - 1, n_buckets + 1).astype(np.int64)
 
     prev = 0
-    for i in range(n_out - 2):
+    for i in range(n_buckets):
         lo, hi = bounds[i], bounds[i + 1]
-        nxt_lo, nxt_hi = bounds[i + 1], (bounds[i + 2] if i + 2 < len(bounds) else m)
+        if hi <= lo:
+            continue
+        nxt_lo, nxt_hi = bounds[i + 1], (bounds[i + 2] if i + 2 <= n_buckets else m)
         cx = lx[nxt_lo:nxt_hi].mean() if nxt_hi > nxt_lo else lx[-1]
         cy = ly[nxt_lo:nxt_hi].mean() if nxt_hi > nxt_lo else ly[-1]
         # Triangle area (up to factor 1/2) of (prev, candidate, next-centroid).
         area = np.abs(
-            (lx[prev] - cx) * (ly[lo:hi] - ly[prev]) - (lx[prev] - lx[lo:hi]) * (cy - ly[prev])
+            (lx[prev] - cx) * (ly[lo:hi] - ly[prev])
+            - (lx[prev] - lx[lo:hi]) * (cy - ly[prev])
         )
-        prev = lo + int(np.argmax(area)) if hi > lo else lo
-        selected[i + 1] = prev
+        lttb_pick = lo + int(np.argmax(area))
+        bucket_max = lo + int(np.argmax(ly[lo:hi]))
+        bucket_min = lo + int(np.argmin(ly[lo:hi]))
+        selected.extend((lttb_pick, bucket_max, bucket_min))
+        prev = lttb_pick
 
     return candidate[np.unique(selected)]
 
@@ -132,7 +146,9 @@ def lttb_downsample(x: np.ndarray, y: np.ndarray, n_out: int) -> np.ndarray:
 class XSService:
     """Extracts cross-section curves with a persistent on-disk cache."""
 
-    def __init__(self, manager: LibraryManager | None = None, cache_dir: Path | None = None):
+    def __init__(
+        self, manager: LibraryManager | None = None, cache_dir: Path | None = None
+    ):
         self._manager = manager or get_library_manager()
         self._cache_dir = (cache_dir or settings.cache_dir) / "xs"
         self._cache_dir.mkdir(parents=True, exist_ok=True)
@@ -145,7 +161,11 @@ class XSService:
         """All MTs servable for a nuclide: stored ones plus synthesizable sums."""
         nuc = self._manager.load(library_id, nuclide)
         infos = [
-            ReactionInfo(mt=mt, name=openmc.data.REACTION_NAME.get(mt, f"MT={mt}"), redundant=False)
+            ReactionInfo(
+                mt=mt,
+                name=openmc.data.REACTION_NAME.get(mt, f"MT={mt}"),
+                redundant=False,
+            )
             for mt in sorted(nuc.reactions)
         ]
         stored = set(nuc.reactions)
@@ -232,7 +252,9 @@ class XSService:
         full.xs_barns = full.xs_barns[idx]
         return full, n_full
 
-    def _resolve_temperature(self, library_id: str, nuclide: str, requested: str) -> str:
+    def _resolve_temperature(
+        self, library_id: str, nuclide: str, requested: str
+    ) -> str:
         """Map a requested temperature to the nearest one in the file.
 
         Processed libraries carry a small fixed set of temperatures (e.g.
@@ -248,14 +270,18 @@ class XSService:
         try:
             target = float(requested.rstrip("Kk"))
         except ValueError:
-            raise ValueError(f"Bad temperature '{requested}'; expected e.g. '294K'") from None
+            raise ValueError(
+                f"Bad temperature '{requested}'; expected e.g. '294K'"
+            ) from None
         return min(available, key=lambda t: abs(float(t[:-1]) - target))
 
     # ------------------------------------------------------------------ #
     # Disk cache                                                          #
     # ------------------------------------------------------------------ #
 
-    def _cache_path(self, library_id: str, nuclide: str, mt: int, temperature: str) -> Path:
+    def _cache_path(
+        self, library_id: str, nuclide: str, mt: int, temperature: str
+    ) -> Path:
         return self._cache_dir / library_id / f"{nuclide}_mt{mt}_{temperature}.npz"
 
     def _cache_load(

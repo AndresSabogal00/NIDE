@@ -51,5 +51,8 @@ def nuclide_reactions(nuclide: str, library: str = "endfb80") -> NuclideReaction
         library_id=library,
         nuclide=nuclide,
         temperatures=temperatures,
-        reactions=[ReactionEntry(mt=r.mt, name=r.name, redundant=r.redundant) for r in reactions],
+        reactions=[
+            ReactionEntry(mt=r.mt, name=r.name, redundant=r.redundant)
+            for r in reactions
+        ],
     )
