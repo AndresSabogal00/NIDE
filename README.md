@@ -6,7 +6,7 @@
 [![Tests](https://img.shields.io/badge/tests-72%20passing-brightgreen.svg)](backend/tests/)
 [![Data: ENDF/B-VIII.0 · JEFF-3.3 · JENDL-5](https://img.shields.io/badge/data-ENDF%2FB--VIII.0%20·%20JEFF--3.3%20·%20JENDL--5-8957e5.svg)](https://openmc.org/data/)
 
-**A free, local, open-source explorer for evaluated nuclear data — built as a
+**A free, local, open-source explorer for evaluated nuclear data, built as a
 successor to JANIS.** Browse, visualize and *automatically compare* cross
 sections, decay data and fission yields from ENDF/B-VIII.0, JEFF-3.3 and
 JENDL-5, with experimental EXFOR data overlaid on every plot. Runs entirely
@@ -20,7 +20,7 @@ For two decades, [JANIS](https://www.oecd-nea.org/janis/) (OECD Nuclear
 Energy Agency) has been the tool physicists reach for to look up a cross
 section. **Its web service is scheduled for decommissioning in December
 2026**, and the desktop version is a closed-source Java application. NIDE
-fills that gap with a modern, fully open stack — and adds the thing JANIS
+fills that gap with a modern, fully open stack and adds the thing JANIS
 never had: an automatic, quantitative comparison engine between evaluations.
 
 Two principles drive the design:
@@ -28,12 +28,12 @@ Two principles drive the design:
 - **Physics you can trust.** All ENDF parsing, resonance reconstruction and
   Doppler-broadened data come from
   [`openmc.data`](https://docs.openmc.org/en/stable/pythonapi/data.html)
-  (MIT/Argonne), validated by the international transport community — not a
+  (MIT/Argonne), validated by the international transport community, not a
   home-grown parser. A 72-test suite pins NIDE's numbers to published
   reference values (see [Physics validation](#physics-validation)).
 - **Total traceability.** Every plot, table and CSV carries the citation of
   the evaluation it came from. Everything is deterministic: no LLMs, no
-  fitting, no magic — just the libraries, compared honestly.
+  fitting, no magic, just the libraries, compared honestly.
 
 ## What you can do with it
 
@@ -110,6 +110,11 @@ libraries). Interactive API docs at http://localhost:8000/docs.
 
 NIDE is also a library. The same validated service layer that powers the web
 app is exposed as a clean Python package — no server required:
+
+> **Note:** run these examples with the interpreter of the virtual
+> environment created by `setup.sh` (`backend/.venv/bin/python`, or activate
+> it with `source backend/.venv/bin/activate`) — a global system Python does
+> not have `nide` installed and will raise `ModuleNotFoundError`.
 
 ```python
 from nide import NuclearLibrary, compare
