@@ -19,7 +19,16 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import chart, comparison, decay, fission_yields, libraries, xs
+from app.api.routes import (
+    chart,
+    comparison,
+    decay,
+    exfor,
+    export,
+    fission_yields,
+    libraries,
+    xs,
+)
 
 app = FastAPI(
     title="NIDE — Nuclear Information and Data Explorer",
@@ -47,6 +56,8 @@ app.include_router(comparison.router)
 app.include_router(decay.router)
 app.include_router(fission_yields.router)
 app.include_router(chart.router)
+app.include_router(exfor.router)
+app.include_router(export.router)
 
 
 @app.get("/api/health", tags=["meta"])
