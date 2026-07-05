@@ -154,6 +154,15 @@ class LibraryManager:
     def has_nuclide(self, library_id: str, nuclide: str) -> bool:
         return library_id in self._index and nuclide in self._index[library_id]
 
+    def hdf5_path(self, library_id: str, nuclide: str) -> Path:
+        """Path to the HDF5 file for one nuclide, for callers that need
+        direct low-level access (e.g. bulk single-value scans that should
+        bypass the LRU and curve caches)."""
+        self._require(library_id)
+        if nuclide not in self._index[library_id]:
+            raise KeyError(f"Nuclide '{nuclide}' not available in {library_id}")
+        return self._index[library_id][nuclide]
+
     def load(self, library_id: str, nuclide: str) -> openmc.data.IncidentNeutron:
         """Load one nuclide's incident-neutron data, with LRU caching.
 
