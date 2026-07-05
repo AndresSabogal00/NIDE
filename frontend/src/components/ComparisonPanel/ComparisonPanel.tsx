@@ -21,12 +21,14 @@ import {
 } from '../../api/client'
 import { displayNuclide, formatEnergy, formatSigma } from '../../lib/format'
 import { baseLayout, logAxis, THEME } from '../../lib/plotly'
+import { useSelection } from '../../state/SelectionContext'
 import PlotlyChart from '../PlotlyChart'
 import ExportButtons from '../ExportDialog/ExportButtons'
 import { Citations, ErrorNote, Field, NuclideInput, Panel, Select } from '../controls'
 
 export default function ComparisonPanel() {
   const [params, setParams] = useSearchParams()
+  const { selection, update } = useSelection()
   const [libraries, setLibraries] = useState<LibraryInfo[]>([])
   const [nuclides, setNuclides] = useState<string[]>([])
   const [reactions, setReactions] = useState<NuclideReactions | null>(null)
@@ -36,10 +38,15 @@ export default function ComparisonPanel() {
   const [loading, setLoading] = useState(false)
   const [plotEl, setPlotEl] = useState<HTMLDivElement | null>(null)
 
-  const nuclide = params.get('nuclide') ?? 'U235'
-  const mt = Number(params.get('mt') ?? 18)
-  const threshold = Number(params.get('th') ?? 5)
+  // URL param (deep link) > shared selection > default; see SelectionContext.
+  const nuclide = params.get('nuclide') ?? selection.nuclide
+  const mt = Number(params.get('mt') ?? selection.mt)
+  const threshold = Number(params.get('th') ?? selection.thresholdPercent)
   const allLibs = ['endfb80', 'jeff33', 'jendl5']
+
+  useEffect(() => {
+    update({ nuclide, mt, thresholdPercent: threshold })
+  }, [nuclide, mt, threshold]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setParam = (key: string, value: string) =>
     setParams(

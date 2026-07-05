@@ -10,6 +10,7 @@ import { useSearchParams } from 'react-router-dom'
 import cytoscape from 'cytoscape'
 import { api, type DecayChain, type DecayInfo } from '../../api/client'
 import { displayNuclide } from '../../lib/format'
+import { useSelection } from '../../state/SelectionContext'
 import { ErrorNote, Field, NuclideInput, Panel, Select } from '../controls'
 
 const MODE_EDGE_COLORS: Record<string, string> = {
@@ -24,6 +25,7 @@ const MODE_EDGE_COLORS: Record<string, string> = {
 
 export default function DecayChainGraph() {
   const [params, setParams] = useSearchParams()
+  const { selection, update } = useSelection()
   const containerRef = useRef<HTMLDivElement>(null)
   const [nuclides, setNuclides] = useState<string[]>([])
   const [chain, setChain] = useState<DecayChain | null>(null)
@@ -31,8 +33,13 @@ export default function DecayChainGraph() {
   const [selectedInfo, setSelectedInfo] = useState<DecayInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const nuclide = params.get('nuclide') ?? 'U238'
+  // URL param (deep link) > shared selection; minBr is view-specific.
+  const nuclide = params.get('nuclide') ?? selection.nuclide
   const minBr = params.get('minbr') ?? '0.0001'
+
+  useEffect(() => {
+    update({ nuclide })
+  }, [nuclide]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Any nuclide with decay data is a valid start; offer the transport-

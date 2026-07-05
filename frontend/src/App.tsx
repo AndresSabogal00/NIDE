@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { SelectionProvider } from './state/SelectionContext'
 import Layout from './components/Layout'
 import NuclideChart from './components/NuclideChart/NuclideChart'
 import XSViewer from './components/XSViewer/XSViewer'
@@ -20,5 +21,9 @@ const router = createBrowserRouter([
 ])
 
 export default function App() {
-  return <RouterProvider router={router} />
+  return (
+    <SelectionProvider>
+      <RouterProvider router={router} />
+    </SelectionProvider>
+  )
 }

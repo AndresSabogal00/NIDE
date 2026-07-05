@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api, type FissionYields } from '../../api/client'
 import { displayNuclide } from '../../lib/format'
+import { useSelection } from '../../state/SelectionContext'
 import { baseLayout, linearAxis, logAxis } from '../../lib/plotly'
 import PlotlyChart from '../PlotlyChart'
 import ExportButtons from '../ExportDialog/ExportButtons'
@@ -22,12 +23,19 @@ const ENERGY_COLORS: Record<string, string> = {
 
 export default function FissionYieldsView() {
   const [params, setParams] = useSearchParams()
+  const { selection, update } = useSelection()
   const [systems, setSystems] = useState<string[]>([])
   const [yields, setYields] = useState<FissionYields | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [plotEl, setPlotEl] = useState<HTMLDivElement | null>(null)
 
-  const nuclide = params.get('nuclide') ?? 'U235'
+  // Follow the shared nuclide only when it actually has a yield evaluation
+  // (only ~30 fissioning systems do); otherwise keep the local default
+  // WITHOUT overwriting the shared selection — a user browsing Th-227
+  // cross sections must not lose it by visiting this view.
+  const sharedIsFissionable = systems.length === 0 || systems.includes(selection.nuclide)
+  const nuclide =
+    params.get('nuclide') ?? (sharedIsFissionable ? selection.nuclide : 'U235')
   const yieldType = params.get('type') ?? 'cumulative'
   const axis = params.get('axis') ?? 'A'
 
@@ -46,7 +54,9 @@ export default function FissionYieldsView() {
   }, [])
 
   useEffect(() => {
-    if (!nuclide) return
+    // Wait for the fissionable-systems list unless the URL pins a nuclide
+    // explicitly: avoids a transient 404 for non-fissionable shared nuclides.
+    if (!nuclide || (systems.length === 0 && !params.get('nuclide'))) return
     setError(null)
     api
       .fissionYields(nuclide, yieldType)
@@ -55,7 +65,7 @@ export default function FissionYieldsView() {
         setError(String(e.message))
         setYields(null)
       })
-  }, [nuclide, yieldType])
+  }, [nuclide, yieldType, systems.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { traces, layout } = useMemo(() => {
     if (!yields) return { traces: [] as Plotly.Data[], layout: {} }
@@ -102,7 +112,13 @@ export default function FissionYieldsView() {
           <Field label="Fissioning nuclide">
             <Select
               value={nuclide}
-              onChange={(v) => setParam('nuclide', v)}
+              onChange={(v) => {
+                setParam('nuclide', v)
+                // Explicit user choice: propagate to the shared selection so
+                // the other views follow (all yield systems are also
+                // transport nuclides).
+                update({ nuclide: v })
+              }}
               options={systems.map((s) => ({ value: s, label: displayNuclide(s) }))}
             />
           </Field>

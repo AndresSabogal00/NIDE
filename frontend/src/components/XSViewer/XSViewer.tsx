@@ -17,28 +17,45 @@ import {
 } from '../../api/client'
 import { displayNuclide } from '../../lib/format'
 import { baseLayout, logAxis } from '../../lib/plotly'
+import { useSelection } from '../../state/SelectionContext'
 import PlotlyChart from '../PlotlyChart'
 import ExportButtons from '../ExportDialog/ExportButtons'
 import { Citations, ErrorNote, Field, LibraryToggles, NuclideInput, Panel, Select } from '../controls'
 
 export default function XSViewer() {
   const [params, setParams] = useSearchParams()
+  const { selection, update } = useSelection()
   const [libraries, setLibraries] = useState<LibraryInfo[]>([])
   const [nuclides, setNuclides] = useState<string[]>([])
   const [reactions, setReactions] = useState<NuclideReactions | null>(null)
   const [curves, setCurves] = useState<XSCurve[]>([])
   const [exfor, setExfor] = useState<ExforResponse | null>(null)
-  // Overlay state lives in the URL (?exfor=1) so chart links and shared
-  // URLs reproduce the exact view.
-  const [showExfor, setShowExfor] = useState(() => params.get('exfor') === '1')
+  // Overlay state: URL (?exfor=1) wins for shared links, else the shared
+  // selection context (so the toggle survives navigating between views).
+  const [showExfor, setShowExfor] = useState(
+    () => (params.has('exfor') ? params.get('exfor') === '1' : selection.exfor),
+  )
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [plotEl, setPlotEl] = useState<HTMLDivElement | null>(null)
 
-  const nuclide = params.get('nuclide') ?? 'U235'
-  const mt = Number(params.get('mt') ?? 18)
-  const temperature = params.get('T') ?? '294K'
-  const selectedLibs = (params.get('libs') ?? 'endfb80').split(',').filter(Boolean)
+  // Resolution order: URL param (deep link) > shared selection > default.
+  const nuclide = params.get('nuclide') ?? selection.nuclide
+  const mt = Number(params.get('mt') ?? selection.mt)
+  const temperature = params.get('T') ?? selection.temperature
+  const selectedLibs = (params.get('libs') ?? selection.libraries.join(',')).split(',').filter(Boolean)
+
+  // Persist whatever is currently resolved into the shared context so other
+  // views (Compare, Decay, Yields) pick the same nuclide/reaction up.
+  useEffect(() => {
+    update({
+      nuclide,
+      mt,
+      temperature,
+      libraries: selectedLibs,
+      exfor: showExfor,
+    })
+  }, [nuclide, mt, temperature, selectedLibs.join(','), showExfor]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setParam = useCallback(
     (key: string, value: string) =>
