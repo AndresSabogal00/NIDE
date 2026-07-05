@@ -1,0 +1,39 @@
+# Packaging for the NIDE Python API (`import nide`) and its backend.
+#
+# Install in-place for library use from anywhere:
+#     pip install -e backend
+#
+# Note on package layout: `nide` is the public API; `app` is the FastAPI
+# backend it wraps. Both ship in the wheel because `nide` imports `app.core`.
+# Before any PyPI publication the generic top-level name `app` should be
+# folded under `nide` (e.g. `nide._backend`); for a local/git install the
+# current layout is fine and avoids churning every import in the repo.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nide"
+version = "0.2.0"
+description = "Nuclear Information and Data Explorer: evaluated nuclear data (ENDF/B, JEFF, JENDL) with automatic multi-library comparison"
+readme = "../README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    # openmc is intentionally NOT listed: there are no macOS arm64 wheels on
+    # PyPI, so it must be installed first from source or conda-forge (see
+    # requirements.txt and README). Everything else resolves normally.
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "numpy>=2.0",
+    "h5py>=3.11",
+    "requests>=2.32",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["nide", "app"]
+
+[tool.ruff]
+line-length = 99

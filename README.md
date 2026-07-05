@@ -125,6 +125,21 @@ indefinitely and the app degrades gracefully when the IAEA API is offline.
 - **HDF5 processing** — the [OpenMC project](https://openmc.org), P.K. Romano
   et al., *Ann. Nucl. Energy* **82** (2015) 90-97.
 
+## Python API
+
+NIDE is also a library — no server needed:
+
+```python
+from nide import NuclearLibrary, compare
+
+u235 = NuclearLibrary("ENDF/B-VIII.0").nuclide("U235")
+u235.cross_section("(n,f)").at(0.0253)        # 586.6 barns
+u235.derived_quantities("capture").resonance_integral_barns
+print(compare("U238", "(n,gamma)").summary)
+```
+
+Installed by `setup.sh` (`pip install -e backend`); see `backend/nide/`.
+
 ## License
 
 MIT. The nuclear data libraries themselves are distributed by their

@@ -16,6 +16,9 @@ echo "==> Installing backend dependencies (openmc builds from source; takes a fe
 HDF5_ROOT=${HDF5_ROOT:-/opt/homebrew} CMAKE_POLICY_VERSION_MINIMUM=3.5 \
   backend/.venv/bin/pip install -r backend/requirements.txt
 
+echo "==> Installing the 'nide' Python API package (editable)"
+backend/.venv/bin/pip install -e backend --no-deps -q
+
 echo "==> Installing frontend dependencies"
 npm --prefix frontend install
 
