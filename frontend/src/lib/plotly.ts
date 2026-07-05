@@ -21,22 +21,31 @@ export const THEME = {
 }
 
 export function baseLayout(overrides: Partial<Plotly.Layout> = {}): Partial<Plotly.Layout> {
-  return {
+  const layout: Partial<Plotly.Layout> = {
     paper_bgcolor: THEME.surface,
     plot_bgcolor: THEME.surface,
     font: { family: 'system-ui, -apple-system, "Segoe UI", sans-serif', color: THEME.textSecondary, size: 12 },
-    margin: { l: 70, r: 20, t: 36, b: 52 },
+    // Bottom margin leaves room for the below-plot legend row + axis title.
+    margin: { l: 70, r: 20, t: 40, b: 100 },
     hovermode: 'x unified',
     hoverlabel: { bgcolor: '#26262425', bordercolor: THEME.baseline, font: { color: THEME.textPrimary } },
     legend: {
       bgcolor: 'rgba(0,0,0,0)',
-      font: { color: THEME.textSecondary },
+      font: { color: THEME.textSecondary, size: 11 },
       orientation: 'h',
-      y: 1.02,
-      yanchor: 'bottom',
+      // Below the plot area: with up to a dozen EXFOR datasets the legend
+      // is several rows tall and must never overlap the title or the data.
+      y: -0.16,
+      yanchor: 'top',
     },
     ...overrides,
   }
+  // Left-anchor any caller-supplied title so it never collides with the
+  // horizontal legend row.
+  if (layout.title && typeof layout.title === 'object') {
+    layout.title = { x: 0.02, xanchor: 'left', ...layout.title }
+  }
+  return layout
 }
 
 export function logAxis(title: string, overrides: Partial<Plotly.LayoutAxis> = {}): Partial<Plotly.LayoutAxis> {
@@ -84,9 +93,11 @@ export async function downloadPng(
   }
   // Plotly's relayout accepts attribute-path keys ('margin.b'); the type
   // definitions only model whole-Layout objects, hence the casts.
+  const currentBottom =
+    (element as unknown as { _fullLayout?: { margin?: { b?: number } } })._fullLayout?.margin?.b ?? 100
   await Plotly.relayout(element, {
     'annotations[0]': annotation,
-    'margin.b': 110,
+    'margin.b': currentBottom + 60,
   } as unknown as Partial<Plotly.Layout>)
   try {
     await Plotly.downloadImage(element, {
@@ -98,7 +109,7 @@ export async function downloadPng(
   } finally {
     await Plotly.relayout(element, {
       annotations: [],
-      'margin.b': 52,
+      'margin.b': currentBottom,
     } as unknown as Partial<Plotly.Layout>)
   }
 }

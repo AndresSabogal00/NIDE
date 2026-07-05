@@ -28,7 +28,9 @@ export default function XSViewer() {
   const [reactions, setReactions] = useState<NuclideReactions | null>(null)
   const [curves, setCurves] = useState<XSCurve[]>([])
   const [exfor, setExfor] = useState<ExforResponse | null>(null)
-  const [showExfor, setShowExfor] = useState(false)
+  // Overlay state lives in the URL (?exfor=1) so chart links and shared
+  // URLs reproduce the exact view.
+  const [showExfor, setShowExfor] = useState(() => params.get('exfor') === '1')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [plotEl, setPlotEl] = useState<HTMLDivElement | null>(null)
@@ -116,7 +118,7 @@ export default function XSViewer() {
             type: 'data' as const,
             array: d.points.map((p) => p.dxs_barns ?? 0),
             color: EXFOR_COLOR,
-            thickness: 1,
+            thickness: 0.5,
             width: 0,
           }
         : undefined,
@@ -126,12 +128,15 @@ export default function XSViewer() {
       marker: {
         color: EXFOR_COLOR,
         symbol: EXFOR_SYMBOLS[i % EXFOR_SYMBOLS.length],
-        size: 6,
+        size: 4,
+        opacity: 0.45,
         line: { width: 1 },
       },
       hovertemplate: `%{y:.4g} b @ %{x:.4g} eV<br>${d.author} ${d.year ?? ''}`,
     }))
-    return [...evaluated, ...experimental]
+    // Experimental scatter first, evaluated curves last: the evaluated
+    // lines must stay visible on top of dense EXFOR point clouds.
+    return [...experimental, ...evaluated]
   }, [curves, exfor])
 
   const layout = useMemo(
@@ -143,9 +148,12 @@ export default function XSViewer() {
         },
         xaxis: logAxis('Incident neutron energy (eV)'),
         yaxis: logAxis('Cross section (barns)'),
-        height: 560,
+        // The EXFOR legend can run to several rows; give it room so it
+        // never collides with the axis title.
+        margin: { l: 70, r: 20, t: 40, b: exfor?.datasets.length ? 170 : 100 },
+        height: exfor?.datasets.length ? 640 : 560,
       }),
-    [nuclide, mt, temperature, curves],
+    [nuclide, mt, temperature, curves, exfor],
   )
 
   const citations = useMemo(() => {

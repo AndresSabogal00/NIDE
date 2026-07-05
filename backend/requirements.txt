@@ -1,0 +1,18 @@
+# NIDE backend dependencies.
+#
+# openmc is installed from source (no macOS arm64 wheels on PyPI as of
+# 2026-07): it needs `brew install cmake hdf5` first. The openmc.data module
+# does all ENDF/HDF5 parsing and resonance handling for NIDE.
+openmc @ git+https://github.com/openmc-dev/openmc.git@v0.15.3
+
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+pydantic-settings>=2.3
+numpy>=2.0
+h5py>=3.11
+requests>=2.32
+
+# Development / QA
+pytest>=8.2
+ruff>=0.5
