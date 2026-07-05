@@ -24,7 +24,7 @@ from app.core.xs_service import get_xs_service
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
-NIDE_LINE = "# Exported by NIDE (Nuclear Information and Data Explorer), https://github.com/"
+NIDE_LINE = "# Exported by NIDE (Nuclear Information and Data Explorer)"
 
 
 def _header(title: str, citations: dict[str, str]) -> list[str]:

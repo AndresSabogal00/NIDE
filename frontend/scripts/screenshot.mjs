@@ -1,5 +1,7 @@
 // E2E smoke test + README screenshots: load every NIDE view with real data,
-// capture PNGs, and report console/page/HTTP errors. Temporary tooling file.
+// capture PNGs to docs/screenshots/, and report console/page/HTTP errors.
+// Run with the backend on :8000 and Vite on :5173:
+//   HS=<path-to-playwright-headless-shell> node scripts/screenshot.mjs
 import { chromium } from 'playwright-core'
 
 const VIEWS = [

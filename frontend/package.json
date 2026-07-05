@@ -1,7 +1,9 @@
 {
-  "name": "frontend",
+  "name": "nide-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.0",
+  "license": "MIT",
+  "description": "Web frontend for NIDE (Nuclear Information and Data Explorer)",
   "type": "module",
   "scripts": {
     "dev": "vite",
