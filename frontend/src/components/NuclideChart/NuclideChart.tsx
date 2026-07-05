@@ -310,21 +310,36 @@ export default function NuclideChart() {
     }
   }, [nuclides, byCell, cellColor, hover, selected, maxN, maxZ])
 
+  // scheduleDraw must be *referentially stable*: it is a dependency of the
+  // initial-fit and observer effects, and `draw` changes identity on every
+  // hover. If scheduleDraw followed it, the initial-fit effect would re-run
+  // on mouse movement and silently reset the zoom to the full-chart view
+  // (the "chart zooms out by itself" bug). The ref indirection keeps the
+  // callback stable while always invoking the latest draw closure.
+  const drawRef = useRef(draw)
+  useEffect(() => {
+    drawRef.current = draw
+  }, [draw])
   const scheduleDraw = useCallback(() => {
     if (rafPending.current) return
     rafPending.current = true
     requestAnimationFrame(() => {
       rafPending.current = false
-      draw()
+      drawRef.current()
     })
-  }, [draw])
+  }, [])
 
   // Redraw when data / mode / hover / selection change, and on resize.
   useEffect(() => {
     scheduleDraw()
-  }, [scheduleDraw])
+  }, [draw, scheduleDraw])
+  // Fit the view exactly once, when the nuclide data first arrives. The
+  // user's pan/zoom must never be overwritten afterwards except by the
+  // explicit "Reset view" button.
+  const didInitialFit = useRef(false)
   useEffect(() => {
-    if (nuclides.length) {
+    if (nuclides.length && !didInitialFit.current) {
+      didInitialFit.current = true
       view.current = fitView()
       scheduleDraw()
     }
