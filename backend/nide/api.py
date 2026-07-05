@@ -154,9 +154,7 @@ class Nuclide:
     def temperatures(self) -> list[str]:
         return get_xs_service().temperatures(self._library_id, self._name)
 
-    def cross_section(
-        self, reaction: int | str, temperature: str = "294K"
-    ) -> CrossSection:
+    def cross_section(self, reaction: int | str, temperature: str = "294K") -> CrossSection:
         """Full-resolution sigma(E) for one reaction.
 
         Parameters

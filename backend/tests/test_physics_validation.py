@@ -132,9 +132,7 @@ class TestDecayData:
     def test_u238_half_life(self):
         # NUBASE2020: 4.468e9 yr.
         info = get_decay_service().info("U238")
-        assert info.half_life_s / SECONDS_PER_JULIAN_YEAR == pytest.approx(
-            4.468e9, rel=0.02
-        )
+        assert info.half_life_s / SECONDS_PER_JULIAN_YEAR == pytest.approx(4.468e9, rel=0.02)
 
 
 class TestFissionYields:
@@ -155,11 +153,7 @@ class TestFissionYields:
         # Thermal U-235 mass-yield curve: asymmetric double hump with peaks
         # ~6-8% near A~92-100 and A~133-140, and a deep valley (<0.1%) at
         # symmetric masses A~115-117.
-        by_a = (
-            get_fission_yield_service()
-            .yields("U235")["cumulative"]["thermal"]
-            .by_mass_number
-        )
+        by_a = get_fission_yield_service().yields("U235")["cumulative"]["thermal"].by_mass_number
         light_peak = max(v for a, v in by_a.items() if 90 <= a <= 102)
         heavy_peak = max(v for a, v in by_a.items() if 130 <= a <= 144)
         valley = min(v for a, v in by_a.items() if 113 <= a <= 118)

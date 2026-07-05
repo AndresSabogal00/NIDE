@@ -6,9 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class DecayModeModel(BaseModel):
-    mode: str = Field(
-        description="ENSDF-style mode: 'beta-', 'alpha', 'ec/beta+', 'it', 'sf'"
-    )
+    mode: str = Field(description="ENSDF-style mode: 'beta-', 'alpha', 'ec/beta+', 'it', 'sf'")
     daughter: str | None
     branching_ratio: float
     branching_ratio_uncertainty: float
@@ -53,9 +51,7 @@ class DecayChainResponse(BaseModel):
 
 class YieldSetModel(BaseModel):
     energy_ev: float
-    energy_label: str = Field(
-        description="'thermal' (0.0253 eV), 'fast' (~500 keV), '14MeV'"
-    )
+    energy_label: str = Field(description="'thermal' (0.0253 eV), 'fast' (~500 keV), '14MeV'")
     by_mass_number: dict[int, float] = Field(
         description=(
             "Mass-chain yields: sum of independent yields per A, or max of "
@@ -72,6 +68,4 @@ class FissionYieldResponse(BaseModel):
     nuclide: str
     yield_type: str = Field(description="'independent' or 'cumulative'")
     sets: list[YieldSetModel]
-    source: str = Field(
-        default="ENDF/B-VIII.0 nfy sublibrary (England & Rider evaluation)"
-    )
+    source: str = Field(default="ENDF/B-VIII.0 nfy sublibrary (England & Rider evaluation)")

@@ -72,10 +72,13 @@ light up as each finishes. Everything lands in `backend/data/` (git-ignored;
 
 ## Physics validation
 
-`pytest` runs 25 checks against reference values from the literature
-(Mughabghab's *Atlas of Neutron Resonances*, NUBASE2020, England & Rider),
-each documented with its source in
-[`backend/tests/`](backend/tests/test_physics_validation.py):
+`pytest` runs 72 checks: 25 physics validations against reference values
+from the literature (Mughabghab's *Atlas of Neutron Resonances*, NUBASE2020,
+England & Rider), plus downsampling regressions on five nuclides with narrow
+resonances, API edge cases, and the Python API — each documented with its
+source in [`backend/tests/`](backend/tests/test_physics_validation.py).
+A formula-by-formula audit against the cited references is recorded in
+[`AUDIT.md`](AUDIT.md); architecture decisions in [`DECISIONS.md`](DECISIONS.md).
 
 | Quantity | NIDE (ENDF/B-VIII.0) | Reference |
 |---|---|---|

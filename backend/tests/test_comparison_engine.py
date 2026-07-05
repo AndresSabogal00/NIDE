@@ -52,9 +52,7 @@ class TestCompare:
         assert fast[0].max_abs_diff_percent == pytest.approx(10.0, abs=0.2)
         assert thermal[0].max_abs_diff_percent < 0.01
         assert any("fast" in line for line in result.summary)
-        assert any(
-            d.library_id == "libB" and d.e_min_ev > 900 for d in result.discrepancies
-        )
+        assert any(d.library_id == "libB" and d.e_min_ev > 900 for d in result.discrepancies)
 
     def test_identical_curves_report_agreement(self):
         energy = np.logspace(-5, 7, 500)
@@ -85,8 +83,7 @@ class TestRealLibraries:
         curves = {
             lib: (c.energy_ev, c.xs_barns)
             for lib, c in (
-                (lib, svc.get_curve(lib, "U235", 18, "294K"))
-                for lib in ("endfb80", "jeff33")
+                (lib, svc.get_curve(lib, "U235", 18, "294K")) for lib in ("endfb80", "jeff33")
             )
         }
         result = compare("U235", 18, curves, threshold_percent=5.0)

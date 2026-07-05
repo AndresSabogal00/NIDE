@@ -19,8 +19,7 @@ router = APIRouter(prefix="/api", tags=["comparison"])
 _DEFINITIONS = {
     "thermal_xs_barns": "sigma(0.0253 eV), the 2200 m/s conventional thermal value",
     "resonance_integral_barns": (
-        "I = integral sigma(E) dE/E from 0.5 eV (Cd cutoff) to 20 MeV, "
-        "1/E epithermal spectrum"
+        "I = integral sigma(E) dE/E from 0.5 eV (Cd cutoff) to 20 MeV, 1/E epithermal spectrum"
     ),
     "maxwellian_avg_barns": (
         "Flux-weighted average over a Maxwell-Boltzmann spectrum at T "
@@ -49,9 +48,7 @@ def compare_libraries(
         description="Comma-separated library ids; the first is the reference",
     ),
     temperature: str = Query(default="294K"),
-    threshold: float = Query(
-        default=5.0, gt=0.0, description="Discrepancy threshold in percent"
-    ),
+    threshold: float = Query(default=5.0, gt=0.0, description="Discrepancy threshold in percent"),
     max_points: int = Query(default=5000, ge=100, le=200_000),
 ):
     """Compare sigma(E) across libraries with automatic discrepancy detection.
@@ -99,9 +96,7 @@ def compare_libraries(
         "missing_libraries": missing,
         "energy_ev": result.energy_ev[idx].tolist(),
         "curves": {lib: _nan_to_none(arr[idx]) for lib, arr in result.curves.items()},
-        "diff_percent": {
-            lib: _nan_to_none(arr[idx]) for lib, arr in result.diff_percent.items()
-        },
+        "diff_percent": {lib: _nan_to_none(arr[idx]) for lib, arr in result.diff_percent.items()},
         "region_stats": [stats.__dict__ for stats in result.region_stats],
         "discrepancies": [d.__dict__ for d in result.discrepancies],
         "summary": result.summary,
@@ -116,9 +111,7 @@ def derived_quantities(
     mt: int = Query(description="ENDF MT number"),
     libraries: str = Query(default="endfb80,jeff33,jendl5"),
     temperature: str = Query(default="294K"),
-    maxwellian_t: float = Query(
-        default=293.6, gt=0.0, description="Maxwellian temperature (K)"
-    ),
+    maxwellian_t: float = Query(default=293.6, gt=0.0, description="Maxwellian temperature (K)"),
 ):
     """Derived integral quantities per library — the automatic comparison table."""
     manager = get_library_manager()
@@ -140,9 +133,7 @@ def derived_quantities(
             }
         )
     if not results:
-        raise HTTPException(
-            status_code=404, detail=f"No library provides {nuclide} MT={mt}"
-        )
+        raise HTTPException(status_code=404, detail=f"No library provides {nuclide} MT={mt}")
     return {
         "nuclide": nuclide,
         "mt": mt,

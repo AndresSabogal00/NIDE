@@ -165,7 +165,10 @@ class NuclidePropertiesService:
             half_life_s: float | None = None
             if not stable and half_field and half_field not in ("p-unst",):
                 try:
-                    value = float(half_field.replace("#", "").rstrip("<>~"))
+                    # Limit/estimate markers ('>1.9', '<300', '~5') can lead
+                    # or trail the value; the numeric part is still the best
+                    # available estimate for chart coloring.
+                    value = float(half_field.replace("#", "").strip("<>~ "))
                     half_life_s = value * _TIME_UNIT_S[unit_field]
                 except (ValueError, KeyError):
                     half_life_s = None

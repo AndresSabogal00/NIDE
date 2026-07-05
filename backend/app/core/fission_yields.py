@@ -88,14 +88,10 @@ class FissionYieldService:
             if nuclide in self._cache:
                 return self._cache[nuclide]
         if nuclide not in self._files:
-            raise KeyError(
-                f"No fission yield data for '{nuclide}' in ENDF/B-VIII.0 nfy"
-            )
+            raise KeyError(f"No fission yield data for '{nuclide}' in ENDF/B-VIII.0 nfy")
         fpy = openmc.data.FissionProductYields(self._files[nuclide])
         result = {
-            "independent": self._package(
-                fpy.energies, fpy.independent, cumulative=False
-            ),
+            "independent": self._package(fpy.energies, fpy.independent, cumulative=False),
             "cumulative": self._package(fpy.energies, fpy.cumulative, cumulative=True),
         }
         with self._lock:
@@ -107,9 +103,7 @@ class FissionYieldService:
         label, _ = min(_ENERGY_LABELS, key=lambda pair: abs(pair[1] - energy_ev))
         return label
 
-    def _package(
-        self, energies, tables: list[dict], cumulative: bool
-    ) -> dict[str, YieldSet]:
+    def _package(self, energies, tables: list[dict], cumulative: bool) -> dict[str, YieldSet]:
         """Convert openmc's per-energy yield dicts into aggregated YieldSets.
 
         ``energies`` is the numpy array (or None) from

@@ -7,9 +7,7 @@ from pydantic import BaseModel, Field
 
 class RegionStatsModel(BaseModel):
     library_id: str
-    region: str = Field(
-        description="'thermal' (<0.625 eV), 'epithermal', or 'fast' (>100 keV)"
-    )
+    region: str = Field(description="'thermal' (<0.625 eV), 'epithermal', or 'fast' (>100 keV)")
     e_min_ev: float
     e_max_ev: float
     n_points: int

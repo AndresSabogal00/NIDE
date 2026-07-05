@@ -14,13 +14,9 @@ router = APIRouter(prefix="/api", tags=["cross-sections"])
 @router.get("/xs", response_model=XSCurveResponse)
 def get_cross_section(
     nuclide: str = Query(description="GNDS nuclide name, e.g. U235"),
-    mt: int = Query(
-        description="ENDF MT number (18=fission, 102=(n,gamma), 2=elastic, 1=total)"
-    ),
+    mt: int = Query(description="ENDF MT number (18=fission, 102=(n,gamma), 2=elastic, 1=total)"),
     library: str = Query(default="endfb80"),
-    temperature: str = Query(
-        default="294K", description="Snapped to nearest available"
-    ),
+    temperature: str = Query(default="294K", description="Snapped to nearest available"),
     max_points: int = Query(
         default=5000,
         ge=2,

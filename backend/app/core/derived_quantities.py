@@ -23,14 +23,15 @@ Resonance integral
     the ideal epithermal slowing-down spectrum. Same convention as the Atlas
     and JANIS.
 
-Maxwellian-averaged cross section (MACS-style average)
-    <sigma>_Maxw(T) = (2/sqrt(pi)) * integral(sigma(E) E exp(-E/kT) dE)
-                                    / integral(E exp(-E/kT) dE)
-    i.e. a flux-weighted (v * n(v)) average over a Maxwell-Boltzmann spectrum
-    of temperature T, normalized so that a 1/v cross section yields exactly
-    its 2200 m/s value at T = 293.6 K when multiplied by sqrt(pi)/2 — we
-    report the spectrum average itself (Westcott g-factor convention:
-    g = <sigma>_Maxw * (2/sqrt(pi))^-1 ... see Notes in `maxwellian_average`).
+Maxwellian-averaged cross section and Westcott g-factor
+    <sigma>(T) = integral(sigma(E) E exp(-E/kT) dE)
+               / integral(E exp(-E/kT) dE)
+    i.e. a flux-weighted (v * n(v)) average over a Maxwell-Boltzmann
+    spectrum of temperature T. The Westcott g-factor uses the strict
+    AECL-1101 definition g(T) = <sigma v>/(sigma_0 v0)
+    = (2/sqrt(pi)) sqrt(T/T_0) <sigma>(T)/sigma_0 with sigma_0 fixed at
+    0.0253 eV — see `maxwellian_average` for the derivation and the audit
+    note.
 
 Watt fission-spectrum average
     <sigma>_Watt = integral(sigma(E) chi(E) dE) / integral(chi(E) dE) with
@@ -103,9 +104,7 @@ def _interp_loglog(energy: np.ndarray, xs: np.ndarray, e_query: float) -> float:
     if s0 <= 0.0 or s1 <= 0.0:
         # Fall back to lin-lin near zeros (log undefined).
         return float(s0 + (s1 - s0) * (e_query - e0) / (e1 - e0))
-    return float(
-        np.exp(np.log(s0) + np.log(s1 / s0) * np.log(e_query / e0) / np.log(e1 / e0))
-    )
+    return float(np.exp(np.log(s0) + np.log(s1 / s0) * np.log(e_query / e0) / np.log(e1 / e0)))
 
 
 def thermal_value(energy: np.ndarray, xs: np.ndarray) -> float | None:
@@ -149,16 +148,27 @@ def maxwellian_average(
     Computes the flux-weighted average over a Maxwell-Boltzmann neutron
     spectrum at temperature ``temperature_k``::
 
-        <sigma> = int sigma(E) * E * exp(-E/kT) dE / int E * exp(-E/kT) dE
+        <sigma>(T) = int sigma(E) * E * exp(-E/kT) dE / int E * exp(-E/kT) dE
 
     (E * exp(-E/kT) is the Maxwellian *flux* per unit energy, i.e. v * n(E)).
 
-    The Westcott g-factor is reported as::
+    The Westcott g-factor follows the strict definition of AECL-1101 [3]_:
+    the reaction rate in a Maxwellian at temperature T equals
+    ``n * v0 * sigma_0 * g(T)`` with the *fixed* reference point
+    sigma_0 = sigma(E_0 = 0.0253 eV) and v0 = 2200 m/s, giving::
 
-        g(T) = <sigma> * (2/sqrt(pi)) / sigma(E_T),  E_T = k*T
+        g(T) = <sigma v> / (sigma_0 v0)
+             = (2/sqrt(pi)) * sqrt(T/T_0) * <sigma>(T) / sigma_0
 
-    which equals 1 exactly for a 1/v absorber — the standard diagnostic for
-    non-1/v behavior (g(U-235 fission, 293.6 K) ~ 0.977 [3]_).
+    where T_0 = E_0 / k = 293.6 K and the sqrt(T/T_0) factor is the ratio of
+    the Maxwellian mean speed to v0. For a 1/v absorber g(T) = 1 at *every*
+    temperature; deviations measure non-1/v behavior
+    (g(U-235 fission, 293.6 K) ~ 0.977 [3]_).
+
+    Note: an earlier revision normalized by sigma(kT) instead of sigma_0,
+    which coincides with this definition at T = T_0 and for 1/v absorbers
+    but is not Westcott's g at other temperatures; fixed during the audit
+    (see AUDIT.md).
 
     Integration runs from the grid start to 30 kT, beyond which the
     Maxwellian weight is < 1e-11 of its peak.
@@ -183,12 +193,11 @@ def maxwellian_average(
     if denominator <= 0.0 or numerator <= 0.0:
         return None, None
     avg = float(numerator / denominator)
-    sigma_at_kt = _interp_loglog(energy, xs, kt)
+    sigma_0 = _interp_loglog(energy, xs, THERMAL_ENERGY_EV)
     g = None
-    if not np.isnan(sigma_at_kt) and sigma_at_kt > 0.0:
-        # 2/sqrt(pi) converts the flux average to the Westcott convention in
-        # which a 1/v absorber gives g = 1 (see AECL-1101).
-        g = float(avg * 2.0 / np.sqrt(np.pi) / sigma_at_kt)
+    if not np.isnan(sigma_0) and sigma_0 > 0.0:
+        t_0 = THERMAL_ENERGY_EV / BOLTZMANN_EV_PER_K  # 293.60 K
+        g = float(avg * 2.0 / np.sqrt(np.pi) * np.sqrt(temperature_k / t_0) / sigma_0)
     return avg, g
 
 

@@ -14,9 +14,7 @@ router = APIRouter(prefix="/api", tags=["exfor"])
 @router.get("/exfor")
 def exfor(
     nuclide: str = Query(description="GNDS nuclide name, e.g. U235"),
-    mt: int = Query(
-        description="ENDF MT number (mapped to EXFOR notation, e.g. 102 -> n,g)"
-    ),
+    mt: int = Query(description="ENDF MT number (mapped to EXFOR notation, e.g. 102 -> n,g)"),
 ):
     """Experimental datasets from EXFOR via the IAEA Data Explorer API.
 

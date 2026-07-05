@@ -96,9 +96,9 @@ class LibraryManager:
         self._data_dir = data_dir or settings.data_dir
         self._cache_size = cache_size or settings.nuclide_cache_size
         self._lock = Lock()
-        self._nuclide_cache: OrderedDict[
-            tuple[str, str], openmc.data.IncidentNeutron
-        ] = OrderedDict()
+        self._nuclide_cache: OrderedDict[tuple[str, str], openmc.data.IncidentNeutron] = (
+            OrderedDict()
+        )
         # library_id -> {nuclide name -> HDF5 path}
         self._index: dict[str, dict[str, Path]] = {}
         self.refresh()
@@ -135,11 +135,7 @@ class LibraryManager:
     @property
     def available_libraries(self) -> list[LibraryMetadata]:
         """Metadata for every library found on disk, in canonical order."""
-        return [
-            SUPPORTED_LIBRARIES[lid]
-            for lid in SUPPORTED_LIBRARIES
-            if lid in self._index
-        ]
+        return [SUPPORTED_LIBRARIES[lid] for lid in SUPPORTED_LIBRARIES if lid in self._index]
 
     def metadata(self, library_id: str) -> LibraryMetadata:
         if library_id not in SUPPORTED_LIBRARIES:

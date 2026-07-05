@@ -126,9 +126,7 @@ class ComparisonResult:
     explanation: list[str] = field(default_factory=list)
 
 
-def interp_loglog_grid(
-    energy: np.ndarray, xs: np.ndarray, grid: np.ndarray
-) -> np.ndarray:
+def interp_loglog_grid(energy: np.ndarray, xs: np.ndarray, grid: np.ndarray) -> np.ndarray:
     """Interpolate a curve onto ``grid``, log-log with lin-lin near zeros.
 
     Vectorized: log-log interpolation is linear interpolation of log(sigma)
@@ -251,10 +249,7 @@ def compare(
     if len(union) > max_grid_points:
         union = union[:: len(union) // max_grid_points + 1]
 
-    on_grid = {
-        lib: interp_loglog_grid(energy, xs, union)
-        for lib, (energy, xs) in curves.items()
-    }
+    on_grid = {lib: interp_loglog_grid(energy, xs, union) for lib, (energy, xs) in curves.items()}
 
     result = ComparisonResult(
         nuclide=nuclide,
@@ -321,9 +316,7 @@ def compare(
     return result
 
 
-def _explain(
-    result: ComparisonResult, threshold_percent: float, du: np.ndarray
-) -> list[str]:
+def _explain(result: ComparisonResult, threshold_percent: float, du: np.ndarray) -> list[str]:
     """Deterministic plain-language reading of the deviation profile.
 
     Rule-based text generation (no models, no randomness): per non-reference

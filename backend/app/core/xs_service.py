@@ -111,9 +111,7 @@ def lttb_downsample(x: np.ndarray, y: np.ndarray, n_out: int) -> np.ndarray:
 
     lx = np.log10(x[candidate])
     # Zeros kept as onset anchors get a floor value for area computation only.
-    ly = np.log10(
-        np.maximum(y[candidate], np.min(y[candidate][y[candidate] > 0]) * 1e-3)
-    )
+    ly = np.log10(np.maximum(y[candidate], np.min(y[candidate][y[candidate] > 0]) * 1e-3))
 
     m = len(candidate)
     n_buckets = max(n_out // 3, 2)
@@ -131,8 +129,7 @@ def lttb_downsample(x: np.ndarray, y: np.ndarray, n_out: int) -> np.ndarray:
         cy = ly[nxt_lo:nxt_hi].mean() if nxt_hi > nxt_lo else ly[-1]
         # Triangle area (up to factor 1/2) of (prev, candidate, next-centroid).
         area = np.abs(
-            (lx[prev] - cx) * (ly[lo:hi] - ly[prev])
-            - (lx[prev] - lx[lo:hi]) * (cy - ly[prev])
+            (lx[prev] - cx) * (ly[lo:hi] - ly[prev]) - (lx[prev] - lx[lo:hi]) * (cy - ly[prev])
         )
         lttb_pick = lo + int(np.argmax(area))
         bucket_max = lo + int(np.argmax(ly[lo:hi]))
@@ -146,9 +143,7 @@ def lttb_downsample(x: np.ndarray, y: np.ndarray, n_out: int) -> np.ndarray:
 class XSService:
     """Extracts cross-section curves with a persistent on-disk cache."""
 
-    def __init__(
-        self, manager: LibraryManager | None = None, cache_dir: Path | None = None
-    ):
+    def __init__(self, manager: LibraryManager | None = None, cache_dir: Path | None = None):
         self._manager = manager or get_library_manager()
         self._cache_dir = (cache_dir or settings.cache_dir) / "xs"
         self._cache_dir.mkdir(parents=True, exist_ok=True)
@@ -216,9 +211,7 @@ class XSService:
             try:
                 reaction = nuc[mt]
             except KeyError:
-                raise KeyError(
-                    f"MT={mt} not available for {nuclide} in {library_id}"
-                ) from None
+                raise KeyError(f"MT={mt} not available for {nuclide} in {library_id}") from None
             energy = nuc.energy[temperature]
             xs = reaction.xs[temperature](energy)
             # Numerical noise from summed redundant reactions can produce
@@ -252,9 +245,7 @@ class XSService:
         full.xs_barns = full.xs_barns[idx]
         return full, n_full
 
-    def _resolve_temperature(
-        self, library_id: str, nuclide: str, requested: str
-    ) -> str:
+    def _resolve_temperature(self, library_id: str, nuclide: str, requested: str) -> str:
         """Map a requested temperature to the nearest one in the file.
 
         Processed libraries carry a small fixed set of temperatures (e.g.
@@ -270,18 +261,14 @@ class XSService:
         try:
             target = float(requested.rstrip("Kk"))
         except ValueError:
-            raise ValueError(
-                f"Bad temperature '{requested}'; expected e.g. '294K'"
-            ) from None
+            raise ValueError(f"Bad temperature '{requested}'; expected e.g. '294K'") from None
         return min(available, key=lambda t: abs(float(t[:-1]) - target))
 
     # ------------------------------------------------------------------ #
     # Disk cache                                                          #
     # ------------------------------------------------------------------ #
 
-    def _cache_path(
-        self, library_id: str, nuclide: str, mt: int, temperature: str
-    ) -> Path:
+    def _cache_path(self, library_id: str, nuclide: str, mt: int, temperature: str) -> Path:
         return self._cache_dir / library_id / f"{nuclide}_mt{mt}_{temperature}.npz"
 
     def _cache_load(

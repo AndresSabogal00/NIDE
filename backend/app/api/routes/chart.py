@@ -44,9 +44,7 @@ def chart_nuclides(library: str = Query(default="endfb80")):
         with_xs = set()
     return {
         "citation": NUBASE_CITATION,
-        "nuclides": [
-            {**p.__dict__, "has_xs_data": p.nuclide in with_xs} for p in service.all()
-        ],
+        "nuclides": [{**p.__dict__, "has_xs_data": p.nuclide in with_xs} for p in service.all()],
     }
 
 
@@ -74,9 +72,7 @@ def thermal_capture_map(library: str = Query(default="endfb80")):
     values: dict[str, float] = {}
     for nuclide in nuclides:
         try:
-            nuc = openmc.data.IncidentNeutron.from_hdf5(
-                manager.hdf5_path(library, nuclide)
-            )
+            nuc = openmc.data.IncidentNeutron.from_hdf5(manager.hdf5_path(library, nuclide))
         except (OSError, KeyError):
             continue
         if 102 not in nuc.reactions:

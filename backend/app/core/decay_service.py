@@ -133,12 +133,8 @@ class DecayService:
                 continue
             nuc = dec.nuclide
             stable = bool(nuc.get("stable", False))
-            half_life = (
-                None if stable or dec.half_life is None else float(dec.half_life.n)
-            )
-            half_life_unc = (
-                None if stable or dec.half_life is None else float(dec.half_life.s)
-            )
+            half_life = None if stable or dec.half_life is None else float(dec.half_life.n)
+            half_life_unc = None if stable or dec.half_life is None else float(dec.half_life.s)
             # Total mean decay energy released (eV): sum of the average
             # light-particle, electromagnetic and heavy-particle components
             # (ENDF MF=8 MT=457 average energies).
@@ -147,9 +143,7 @@ class DecayService:
                 decay_energy = float(dec.decay_energy.n)
             modes = [
                 DecayModeInfo(
-                    mode=",".join(m.modes)
-                    if isinstance(m.modes, list)
-                    else str(m.modes),
+                    mode=",".join(m.modes) if isinstance(m.modes, list) else str(m.modes),
                     daughter=m.daughter,
                     branching_ratio=float(m.branching_ratio.n),
                     branching_ratio_uncertainty=float(m.branching_ratio.s),
@@ -172,9 +166,7 @@ class DecayService:
     def info(self, nuclide: str) -> NuclideDecayInfo:
         data = self.summary()
         if nuclide not in data:
-            raise KeyError(
-                f"No decay data for '{nuclide}' in ENDF/B-VIII.0 decay sublibrary"
-            )
+            raise KeyError(f"No decay data for '{nuclide}' in ENDF/B-VIII.0 decay sublibrary")
         return data[nuclide]
 
     # ------------------------------------------------------------------ #

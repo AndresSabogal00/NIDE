@@ -24,9 +24,7 @@ from app.core.xs_service import get_xs_service
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
-NIDE_LINE = (
-    "# Exported by NIDE (Nuclear Information and Data Explorer), https://github.com/"
-)
+NIDE_LINE = "# Exported by NIDE (Nuclear Information and Data Explorer), https://github.com/"
 
 
 def _header(title: str, citations: dict[str, str]) -> list[str]:
@@ -74,9 +72,7 @@ def export_xs_csv(
     )
     buffer.write("\n".join(_header(title, citations)) + "\n")
     for curve in curves:
-        buffer.write(
-            f"# --- library: {curve.library_id}, {len(curve.energy_ev)} points ---\n"
-        )
+        buffer.write(f"# --- library: {curve.library_id}, {len(curve.energy_ev)} points ---\n")
         buffer.write("library,energy_eV,cross_section_barns\n")
         for energy, xs in zip(curve.energy_ev, curve.xs_barns):
             buffer.write(f"{curve.library_id},{float(energy)!r},{float(xs)!r}\n")
@@ -106,9 +102,7 @@ def export_comparison_csv(
         curves[lib] = (curve.energy_ev, curve.xs_barns)
         citations[manager.metadata(lib).name] = manager.metadata(lib).citation
     if len(curves) < 2:
-        raise HTTPException(
-            status_code=404, detail="Need two or more libraries with data"
-        )
+        raise HTTPException(status_code=404, detail="Need two or more libraries with data")
 
     result = compare(nuclide, mt, curves, threshold_percent=threshold)
     lines = _header(
