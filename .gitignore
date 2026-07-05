@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+backend/.venv/
+
+# Nuclear data libraries (multi-GB, downloaded by backend/scripts/download_data.py)
+backend/data/
+
+# Processed cross-section / EXFOR cache (regenerated on demand)
+backend/cache/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# OS / editors
+.DS_Store
+*.log
