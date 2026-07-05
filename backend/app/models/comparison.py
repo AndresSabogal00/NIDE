@@ -13,10 +13,23 @@ class RegionStatsModel(BaseModel):
     e_min_ev: float
     e_max_ev: float
     n_points: int
-    max_abs_diff_percent: float
+    max_abs_diff_percent: float = Field(
+        description=(
+            "Complementary statistic: near sharp resonances the max is often "
+            "a mesh-shift artifact of a single narrow feature, not regional disagreement"
+        )
+    )
     mean_abs_diff_percent: float
-    median_abs_diff_percent: float
+    median_abs_diff_percent: float = Field(
+        description="Headline statistic: typical agreement across the region"
+    )
     energy_at_max_ev: float
+    lethargy_fraction_above: float = Field(
+        description=(
+            "Fraction of the region's ln(E) range where |deviation| exceeds the "
+            "threshold (lethargy-weighted: immune to grid-density bias)"
+        )
+    )
 
 
 class DiscrepancyModel(BaseModel):
@@ -24,6 +37,11 @@ class DiscrepancyModel(BaseModel):
     e_min_ev: float
     e_max_ev: float
     max_abs_diff_percent: float
+    median_abs_diff_percent: float
+    lethargy_width: float = Field(description="ln(e_max/e_min) of the interval")
+    character: str = Field(
+        description="'narrow' (<0.1 lethargy, resonance-like spike) or 'broad' (systematic band)"
+    )
 
 
 class ComparisonResponse(BaseModel):
@@ -45,6 +63,12 @@ class ComparisonResponse(BaseModel):
     region_stats: list[RegionStatsModel]
     discrepancies: list[DiscrepancyModel]
     summary: list[str] = Field(description="Human-readable discrepancy report lines")
+    explanation: list[str] = Field(
+        description=(
+            "Deterministic (rule-based, LLM-free) reading of the deviation "
+            "profile: agreement coverage and narrow-spike vs broad-band character"
+        )
+    )
     citations: dict[str, str]
 
 

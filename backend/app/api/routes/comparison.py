@@ -102,33 +102,12 @@ def compare_libraries(
         "diff_percent": {
             lib: _nan_to_none(arr[idx]) for lib, arr in result.diff_percent.items()
         },
-        "region_stats": [
-            # RegionStats lack the library id (engine groups per library
-            # in insertion order); reconstruct pairing for the client.
-            stats.__dict__ | {"library_id": lib}
-            for lib, stats_group in _stats_by_library(result).items()
-            for stats in stats_group
-        ],
+        "region_stats": [stats.__dict__ for stats in result.region_stats],
         "discrepancies": [d.__dict__ for d in result.discrepancies],
         "summary": result.summary,
+        "explanation": result.explanation,
         "citations": {lib: manager.metadata(lib).citation for lib in curves},
     }
-
-
-def _stats_by_library(result):
-    """Regroup the flat region_stats list by non-reference library.
-
-    The engine appends stats in library-major order (all regions of lib A,
-    then lib B, ...), so chunk by consecutive region cycles.
-    """
-    grouped: dict[str, list] = {}
-    libs = [lib for lib in result.curves if lib != result.reference_library]
-    if not libs:
-        return grouped
-    per_lib = len(result.region_stats) // len(libs) if libs else 0
-    for i, lib in enumerate(libs):
-        grouped[lib] = result.region_stats[i * per_lib : (i + 1) * per_lib]
-    return grouped
 
 
 @router.get("/derived", response_model=DerivedResponse)

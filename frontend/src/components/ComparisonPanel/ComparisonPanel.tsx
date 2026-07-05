@@ -42,11 +42,13 @@ export default function ComparisonPanel() {
   const nuclide = params.get('nuclide') ?? selection.nuclide
   const mt = Number(params.get('mt') ?? selection.mt)
   const threshold = Number(params.get('th') ?? selection.thresholdPercent)
-  const allLibs = ['endfb80', 'jeff33', 'jendl5']
+  const reference = params.get('ref') ?? selection.referenceLibrary
+  // The engine treats the first library as the reference, so order matters.
+  const allLibs = [reference, ...['endfb80', 'jeff33', 'jendl5'].filter((l) => l !== reference)]
 
   useEffect(() => {
-    update({ nuclide, mt, thresholdPercent: threshold })
-  }, [nuclide, mt, threshold]) // eslint-disable-line react-hooks/exhaustive-deps
+    update({ nuclide, mt, thresholdPercent: threshold, referenceLibrary: reference })
+  }, [nuclide, mt, threshold, reference]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setParam = (key: string, value: string) =>
     setParams(
@@ -86,7 +88,7 @@ export default function ComparisonPanel() {
         setDerived(null)
       })
       .finally(() => setLoading(false))
-  }, [nuclide, mt, threshold]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [nuclide, mt, threshold, reference]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { traces, layout } = useMemo(() => {
     if (!comparison) return { traces: [] as Plotly.Data[], layout: {} }
@@ -148,6 +150,23 @@ export default function ComparisonPanel() {
           fillcolor: 'rgba(195,194,183,0.07)',
           line: { width: 0 },
         },
+        // Above-threshold intervals, widest (most significant) first. Capped:
+        // a resonant nuclide can produce hundreds of one-point spikes that
+        // would smear into a solid block; the caption states the cap.
+        ...[...comparison.discrepancies]
+          .sort((a, b) => b.lethargy_width - a.lethargy_width)
+          .slice(0, 30)
+          .map((d) => ({
+            type: 'rect' as const,
+            xref: 'x' as const,
+            yref: 'y2 domain' as never,
+            x0: d.e_min_ev,
+            x1: Math.max(d.e_max_ev, d.e_min_ev * 1.001),
+            y0: 0,
+            y1: 1,
+            fillcolor: 'rgba(230,103,103,0.14)',
+            line: { width: 0 },
+          })),
       ],
       height: 680,
     })
@@ -176,6 +195,17 @@ export default function ComparisonPanel() {
                   label: `${r.name} · MT=${r.mt}`,
                 })) ?? [{ value: String(mt), label: `MT=${mt}` }]
               }
+            />
+          </Field>
+          <Field label="Reference library">
+            <Select
+              value={reference}
+              onChange={(v) => setParam('ref', v)}
+              options={[
+                { value: 'endfb80', label: 'ENDF/B-VIII.0' },
+                { value: 'jeff33', label: 'JEFF-3.3' },
+                { value: 'jendl5', label: 'JENDL-5' },
+              ]}
             />
           </Field>
           <Field label="Discrepancy threshold (%)">
@@ -218,10 +248,34 @@ export default function ComparisonPanel() {
                 <li key={line}>· {line}</li>
               ))}
             </ul>
+            {comparison.explanation.length > 0 && (
+              <>
+                <h3 className="mb-1 mt-3 text-xs font-medium text-[var(--text-primary)]">
+                  Reading the comparison
+                </h3>
+                <ul className="space-y-1 text-xs text-[var(--text-secondary)]">
+                  {comparison.explanation.map((line) => (
+                    <li key={line}>· {line}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <p className="mt-2 text-[11px] leading-snug text-[var(--text-muted)]">
+              Extreme maxima (even several hundred %) usually come from a single very narrow
+              resonance where the evaluations place the peak at slightly different energies —
+              they do not represent the overall agreement of the region. The median and the
+              lethargy coverage are the representative statistics.
+            </p>
           </Panel>
 
           <Panel className={loading ? 'opacity-60' : ''}>
             <PlotlyChart data={traces} layout={layout} onReady={setPlotEl} />
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+              Deviation formula: Δ(E) = 100 · (σ_lib(E) − σ_ref(E)) / σ_ref(E), evaluated on
+              the union of the libraries' energy grids over their common domain, log-log
+              interpolation (lin-lin around zeros). Red shading: intervals where |Δ| exceeds
+              the {threshold}% threshold (the {'≤'}30 widest shown); gray band: ±threshold.
+            </p>
             <Citations citations={citations} />
           </Panel>
 
@@ -233,8 +287,24 @@ export default function ComparisonPanel() {
                   <tr className="text-left">
                     <th className="py-1 pr-2 font-normal">Library</th>
                     <th className="py-1 pr-2 font-normal">Region</th>
-                    <th className="py-1 pr-2 text-right font-normal">max |Δ|</th>
-                    <th className="py-1 pr-2 text-right font-normal">median |Δ|</th>
+                    <th
+                      className="py-1 pr-2 text-right font-normal"
+                      title="Typical agreement across the region — the headline statistic"
+                    >
+                      median |Δ|
+                    </th>
+                    <th
+                      className="py-1 pr-2 text-right font-normal"
+                      title={`Share of the region's energy range (in lethargy, i.e. ln E — immune to grid-density bias) where |Δ| exceeds the ${threshold}% threshold`}
+                    >
+                      &gt;{threshold}% coverage
+                    </th>
+                    <th
+                      className="py-1 pr-2 text-right font-normal"
+                      title="Complementary: extreme maxima are usually a single narrow resonance placed at slightly different energies by the evaluations, not regional disagreement"
+                    >
+                      max |Δ|
+                    </th>
                     <th className="py-1 text-right font-normal">at energy</th>
                   </tr>
                 </thead>
@@ -253,16 +323,23 @@ export default function ComparisonPanel() {
                       </td>
                       <td className="py-1.5 pr-2">{s.region}</td>
                       <td
-                        className={`py-1.5 pr-2 text-right ${
-                          s.max_abs_diff_percent > threshold ? 'text-[#e66767]' : ''
+                        className={`py-1.5 pr-2 text-right font-medium ${
+                          s.median_abs_diff_percent > threshold
+                            ? 'text-[#e66767]'
+                            : 'text-[var(--text-primary)]'
                         }`}
                       >
-                        {s.max_abs_diff_percent.toFixed(1)}%
-                      </td>
-                      <td className="py-1.5 pr-2 text-right">
                         {s.median_abs_diff_percent.toFixed(2)}%
                       </td>
-                      <td className="py-1.5 text-right">{formatEnergy(s.energy_at_max_ev)}</td>
+                      <td className="py-1.5 pr-2 text-right">
+                        {(100 * s.lethargy_fraction_above).toFixed(1)}%
+                      </td>
+                      <td className="py-1.5 pr-2 text-right text-[var(--text-muted)]">
+                        {s.max_abs_diff_percent.toFixed(1)}%
+                      </td>
+                      <td className="py-1.5 text-right text-[var(--text-muted)]">
+                        {formatEnergy(s.energy_at_max_ev)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

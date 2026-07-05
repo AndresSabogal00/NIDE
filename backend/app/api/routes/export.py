@@ -116,7 +116,7 @@ def export_comparison_csv(
         f"Units: energy eV, cross sections barns, deviations percent.",
         citations,
     )
-    for summary_line in result.summary:
+    for summary_line in (*result.summary, *result.explanation):
         lines.append(f"# {summary_line}")
     libs = list(result.curves)
     header = (

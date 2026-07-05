@@ -53,6 +53,8 @@ export interface RegionStats {
   mean_abs_diff_percent: number
   median_abs_diff_percent: number
   energy_at_max_ev: number
+  /** Fraction of the region's ln(E) range above the threshold (grid-density immune). */
+  lethargy_fraction_above: number
 }
 
 export interface Comparison {
@@ -71,8 +73,12 @@ export interface Comparison {
     e_min_ev: number
     e_max_ev: number
     max_abs_diff_percent: number
+    median_abs_diff_percent: number
+    lethargy_width: number
+    character: 'narrow' | 'broad'
   }[]
   summary: string[]
+  explanation: string[]
   citations: Record<string, string>
 }
 
